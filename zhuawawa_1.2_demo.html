@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>声网 Agora 抓娃娃</title>
+    <script src="vendor/vendor-bundle.js"></script>
+    <link rel="stylesheet" href="assets/bundle.css">
+</head>
+<style>#bar_222224 {
+    display: none !important;
+    opacity: 0 !important;
+}
+</style>
+<body>
+<div class="video-item" style="display: none"></div>
+<div class="container">
+    <div class="alert alert-info" id="notification" role="alert">提示信息</div>
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <div class="main-box" style="display: flex;justify-content: center">
+                <!--请注意这里的id需要与js中的一致-->
+                <canvas id="jsmpeg-player"></canvas>
+                <canvas id="jsmpeg-player2"></canvas>
+            </div>
+        </div>
+    </div>
+    <form>
+        <ul class="list-group" id="js_join_box">
+            <li class="list-group-item form-group">
+                <div>App Id：（必填）</div>
+                <input type="text" class="form-control" name="appid" placeholder="App id">
+            </li>
+            <li class="list-group-item form-group">
+                <div>App Certificate：（如果没有开通可不填写）</div>
+                <input type="text" class="form-control" name="appcert" placeholder="App certificate">
+            </li>
+            <li class="list-group-item form-group">
+                <div>Channel Name：（必填）</div>
+                <input type="text" class="form-control" name="channelName" placeholder="Channel name">
+            </li>
+            <div>------ uid 需要与推流端一致，uid1 代表正面，uid2代表侧面，默认情况如果不更改则uid1:1，uid2:2，或者传自己定义的数字组合 ------</div>
+            <li class="list-group-item form-group">
+                <div>uid 1(正面的摄像头)</div>
+                <input type="text" class="form-control" name="uid_1" placeholder="uid_1" value=1>
+            </li>
+            <li class="list-group-item form-group">
+                <div>uid 2（侧面的摄像头)</div>
+                <input type="text" class="form-control" name="uid_2" placeholder="uid_2" value=2>
+            </li>
+        </ul>
+    </form>
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <div class="feature-option" id="js_option">
+                <button type="button" class="btn btn-primary" data-type="connect">Connect</button>
+                <button type="button" class="btn btn-primary" data-type="switch">Switch Camera</button>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<script language="JavaScript">
+
+// 建立播放器
+function Player() {
+    var player = this;
+    this.cameras = null;
+    this.camera = null;
+    this.player1 = null;
+    this.player2 = null;
+    this.switching = false;
+    this.play = function (url, position) {
+        if (player.switching) {
+            console.log("switching...");
+            return;
+        }
+        var canvas = document.getElementById('jsmpeg-player');
+        var canvas2 = document.getElementById('jsmpeg-player2');
+        player.switching = true;
+        var switching_time = 1000;
+
+        if (position === 0) {
+            //front
+            if(!player.player1){
+                player.player1 = new JSMpeg.Player(url, { canvas: canvas });
+                setTimeout(function () {
+                    $(canvas2).hide();
+                    $(canvas).show();
+                    player.player2 && player.player2.destroy();
+                    player.player2 = null;
+                    player.switching = false;
+                }, switching_time);
+            } else {
+                player.player1 && player.player1.destroy();
+                player.player1 = null;
+                player.player1 = new JSMpeg.Player(url, { canvas: canvas });
+                player.switching = false;
+            }
+        } else {
+            //side
+            if(!player.player2){
+                player.player2 = new JSMpeg.Player(url, { canvas: canvas2 });
+                setTimeout(function () {
+                    $(canvas).hide();
+                    $(canvas2).show();
+                    player.player1 && player.player1.destroy();
+                    player.player1 = null;
+                    player.switching = false;
+                }, switching_time);
+            } else {
+                player.player2 && player.player2.destroy();
+                player.player2 = null;
+                player.player2 = new JSMpeg.Player(url, { canvas: canvas });
+                player.switching = false;
+            }
+        }
+    }
+    this.switchCamera = function () {
+        if (camera === cameras.main) {
+            camera = cameras.sub;
+            player.play(camera, 1);
+        } else {
+            camera = cameras.main;
+            player.play(camera, 0);
+        }
+    }
+}
+
+window.video_player = new Player();
+
+
+//获取视频流
+$(".btn[data-type='connect']").off("click").on("click", function () {
+    //您申请的app id
+    var appid = $("input[name='appid']").val();
+    //channel 需要与推流端一致
+    var channel = $("input[name='channelName']").val();
+    //如果没有开通app cert 可以忽略
+    var appcert = $("input[name='appcert']").val();
+//    ------ uid 需要与推流端一致，uid1 代表正面，uid2代表侧面，默认情况如果不更改则uid1:1，uid2:2，或者传自己定义的数字组合 ------
+    var uid_1 = $("input[name='uid_1']").val();
+    var uid_2 = $("input[name='uid_2']").val();
+
+    if (!appid || !channel) {
+        alert("appid or channel empty");
+        return;
+    }
+    //step One 获取数据节点
+    $.ajax({
+        url: "https://h5cs-1.agoraio.cn:7668/geth5gw/jsonp",
+        type: "POST",
+        headers: {
+            "Content-type": "application/json; charset=utf-8"
+        },
+        data: JSON.stringify({
+            key: appid,
+            cname: channel
+        })
+    }).done(function (url_step_1) {
+        //step two 利用step One 获取的节点列表的第一个节点，获取视频流
+        console.log("https://" + url_step_1.gateway_addr[0] + "/v1/machine");
+        $.ajax({
+            url: "https://" + url_step_1.gateway_addr[0] + "/v1/machine",
+            type: "POST",
+            data: {
+                appid: appid,
+                channel: channel,
+//                如果没有开启动态key，可以不传channel_key。如果开启了app cert，请参考https://docs.agora.io/cn/2.0.2/addons/Signaling/Product%20Overview/key
+//                key: channel_key,
+                //uid 需要与推流端一致，uid1 代表正面，uid2代表侧面，默认情况如果不更改，或者传，uid1:1，uid2:2
+                uid1:1,
+                uid2:2
+            }
+        }).done(function (machine) {
+            if (!machine || !machine.name) {
+                alert("no machine found");
+                return;
+            }
+
+            if (machine.video_rotation === 90) {
+                $("#jsmpeg-player").addClass("rotation-90");
+                $("#jsmpeg-player2").addClass("rotation-90");
+            }
+
+            if (machine.stream_method === 0) {
+                alert("image streaming is not yet supported");
+            } else {
+                cameras = machine.cameras;
+                camera = machine.cameras.main;
+                video_player.play(camera, 0);
+            }
+        }).fail(function(e){
+            alert("err");
+        });
+    });
+
+    $(".btn[data-type='switch']").off("click").on("click", function () {
+        video_player.switchCamera();
+    });
+
+});
+
+
+</script>
+</html>
