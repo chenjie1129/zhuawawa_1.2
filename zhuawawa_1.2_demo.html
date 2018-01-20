@@ -56,13 +56,13 @@
             <div class="feature-option" id="js_option">
                 <button type="button" class="btn btn-primary" data-type="connect">Connect</button>
                 <button type="button" class="btn btn-primary" data-type="switch">Switch Camera</button>
+                <input type="button" value="Close 'myWindow'" onclick="closeWin()" />
             </div>
         </div>
     </div>
 </div>
 </body>
 <script language="JavaScript">
-
 // 建立播放器
 function Player() {
     var player = this;
@@ -142,6 +142,7 @@ $(".btn[data-type='connect']").off("click").on("click", function () {
 //    ------ uid 需要与推流端一致，uid1 代表正面，uid2代表侧面，默认情况如果不更改则uid1:1，uid2:2，或者传自己定义的数字组合 ------
     var uid_1 = $("input[name='uid_1']").val();
     var uid_2 = $("input[name='uid_2']").val();
+    // var channel_key = "005AQAoAEZDQzk5QkI2QUU5QTA3RDUwMkU3M0U0QTQ0Q0QyMTQwREM0MUNFQjYQAPNZBcHwuUosp3bH8ZIq8f923lVaAAAAAAAAAAAAAA==";
 
     if (!appid || !channel) {
         alert("appid or channel empty");
@@ -178,7 +179,7 @@ $(".btn[data-type='connect']").off("click").on("click", function () {
                 appid: appid,
                 channel: channel,
 //                如果没有开启动态key，可以不传channel_key。如果开启了app cert，请参考https://docs.agora.io/cn/2.0.2/addons/Signaling/Product%20Overview/key
-//                key: channel_key,
+            //    key: channel_key,
                 //uid 需要与推流端一致，uid1 代表正面，uid2代表侧面，默认情况如果不更改，或者传，uid1:1，uid2:2
                 uid1:uid_1,
                 uid2:uid_2
@@ -209,6 +210,8 @@ $(".btn[data-type='connect']").off("click").on("click", function () {
     $(".btn[data-type='switch']").off("click").on("click", function () {
         video_player.switchCamera();
     });
+
+    
 
 });
 
